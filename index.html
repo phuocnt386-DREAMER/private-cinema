@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Private Cinema</title>
+<meta name="theme-color" content="#090A0F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cinema">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23090A0F'/%3E%3Cpath d='M200 150v212l178-106z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23090A0F'/%3E%3Cpath d='M200 150v212l178-106z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script>
+tailwind.config = { theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"', '"Be Vietnam Pro"', 'system-ui', 'sans-serif'] }, colors: { ink: '#090A0F', panel: '#12151F' } } } };
+</script>
+<style>
+  html { background: #090A0F; scroll-behavior: smooth; }
+  body { background: #090A0F; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; padding-top: env(safe-area-inset-top); }
+  .glass { background: rgba(255,255,255,.05); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.1); }
+  .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { scrollbar-width: none; }
+  .glow { box-shadow: 0 0 0 1px rgba(255,255,255,.4), 0 0 32px rgba(255,255,255,.35), 0 0 80px rgba(160,170,255,.25); transition: box-shadow .3s, transform .3s; }
+  .glow:hover { box-shadow: 0 0 0 1px rgba(255,255,255,.6), 0 0 44px rgba(255,255,255,.5), 0 0 110px rgba(160,170,255,.35); }
+  .hero-mask { -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%); mask-image: linear-gradient(to bottom, #000 55%, transparent 100%); }
+  #nav { transition: background .35s, backdrop-filter .35s, border-color .35s; border-bottom: 1px solid transparent; padding-top: env(safe-area-inset-top); }
+  #nav.scrolled { background: rgba(9,10,15,.72); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border-bottom-color: rgba(255,255,255,.08); }
+  #sbox { transition: width .35s ease, opacity .25s ease; }
+  .card img { transition: transform .3s ease; }
+  .card:hover { transform: scale(1.05); z-index: 5; }
+  .card { transition: transform .3s ease; }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+  #dim { opacity: 0; pointer-events: none; transition: opacity .5s; }
+  body.cinema #dim { opacity: 1; pointer-events: auto; }
+  #pbox.pfs { position: fixed; z-index: 90; background: #000; border-radius: 0 !important; aspect-ratio: auto !important; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; }
+  @media (orientation: portrait) { #pbox.pfs { top: 0; left: 100%; width: 100vh; width: 100dvh; height: 100vw; transform-origin: top left; transform: rotate(90deg); } }
+  #fsx { display: none; } #pbox.pfs #fsx { display: flex; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body class="text-white antialiased">
+
+<!-- PIN LOCK -->
+<div id="lock" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-ink">
+  <div class="absolute inset-0 opacity-60" style="background: radial-gradient(60% 50% at 50% 30%, rgba(120,130,255,.22), transparent 70%)"></div>
+  <div id="lockCard" class="glass relative w-full max-w-xs rounded-3xl p-8 text-center shadow-2xl">
+    <div class="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10"><i data-lucide="lock" class="h-6 w-6"></i></div>
+    <h1 class="text-xl font-bold">Private Cinema</h1>
+    <p class="mt-1 text-sm text-white/50">Nhập mã PIN 4 số để vào</p>
+    <div id="dots" class="my-6 flex justify-center gap-3"></div>
+    <div id="pad" class="grid grid-cols-3 gap-3"></div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <!-- NAVBAR -->
+  <header id="nav" class="fixed inset-x-0 top-0 z-40">
+    <div class="mx-auto flex max-w-[1500px] items-center gap-3 px-4 py-3 sm:px-8">
+      <button id="logo" class="flex items-center gap-2 text-lg font-extrabold tracking-tight"><span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-black"><i data-lucide="clapperboard" class="h-4 w-4"></i></span><span class="hidden sm:inline">Cinema</span></button>
+      <div class="ml-auto flex items-center gap-2">
+        <div class="glass flex items-center rounded-full pl-1">
+          <button id="sbtn" class="flex h-9 w-9 items-center justify-center rounded-full" aria-label="Tìm kiếm"><i data-lucide="search" class="h-4 w-4"></i></button>
+          <input id="sbox" type="search" placeholder="Tìm tên phim, thể loại…" class="w-0 bg-transparent text-sm opacity-0 outline-none placeholder:text-white/40" autocomplete="off">
+        </div>
+        <button id="cfgBtn" class="glass flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold hover:bg-white/10"><i data-lucide="settings-2" class="h-4 w-4"></i><span class="hidden sm:inline">Cấu hình nguồn phim</span></button>
+      </div>
+    </div>
+    <div id="pills" class="no-scrollbar mx-auto flex max-w-[1500px] gap-2 overflow-x-auto px-4 pb-3 sm:px-8"></div>
+  </header>
+
+  <!-- HOME -->
+  <main id="home" class="pb-24">
+    <section id="hero"></section>
+    <div class="mx-auto max-w-[1500px] px-4 sm:px-8">
+      <section id="histWrap" class="mt-6 hidden">
+        <h2 class="mb-3 text-lg font-bold">Tiếp tục xem</h2>
+        <div id="hist" class="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 py-3 sm:-mx-8 sm:px-8"></div>
+      </section>
+      <section class="mt-8">
+        <div class="mb-4 flex items-end justify-between"><h2 id="gridTitle" class="text-lg font-bold">Tất cả phim</h2><span id="count" class="text-sm text-white/40"></span></div>
+        <div id="grid" class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- WATCH ROOM -->
+  <section id="watch" class="hidden pb-24 pt-20 sm:pt-24">
+    <div class="mx-auto max-w-5xl px-4 sm:px-8">
+      <div class="mb-4 flex items-center gap-3">
+        <button id="back" class="glass flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10" aria-label="Quay lại"><i data-lucide="arrow-left" class="h-5 w-5"></i></button>
+        <div class="min-w-0"><h1 id="wTitle" class="truncate text-xl font-extrabold sm:text-2xl"></h1><p id="wMeta" class="text-sm text-white/50"></p></div>
+      </div>
+      <div id="pbox" class="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-white/10">
+        <div id="player" class="h-full w-full"></div>
+        <div id="popblock" class="absolute right-0 top-0 z-10 h-14 w-16" style="background:transparent"></div>
+        <button id="fsx" class="absolute left-3 top-3 z-20 h-10 items-center gap-2 rounded-full bg-black/60 px-4 text-sm font-semibold backdrop-blur"><i data-lucide="minimize-2" class="h-4 w-4"></i>Thoát</button>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button id="btnDim" class="glass flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold hover:bg-white/10"><i data-lucide="lightbulb-off" class="h-4 w-4"></i><span>Tắt đèn</span></button>
+        <button id="btnFs" class="glass flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold hover:bg-white/10"><i data-lucide="maximize" class="h-4 w-4"></i>Toàn màn hình</button>
+        <button id="btnFav" class="glass flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold hover:bg-white/10"><i data-lucide="heart" class="h-4 w-4"></i><span>Yêu thích</span></button>
+      </div>
+      <div id="epWrap" class="mt-8 hidden">
+        <h2 class="mb-3 text-lg font-bold">Danh sách tập</h2>
+        <div id="eps" class="grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-6"></div>
+      </div>
+      <p id="wDesc" class="mt-8 max-w-3xl text-[15px] leading-relaxed text-white/70"></p>
+    </div>
+  </section>
+</div>
+
+<!-- CONFIG MODAL -->
+<div id="cfg" class="fixed inset-0 z-[80] hidden items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+  <div class="glass max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-panel/80 p-6 shadow-2xl">
+    <div class="mb-4 flex items-center justify-between"><h2 class="text-lg font-bold">Cấu hình nguồn phim</h2><button id="cfgClose" class="flex h-9 w-9 items-center justify-center rounded-full hover:bg-white/10" aria-label="Đóng"><i data-lucide="x" class="h-5 w-5"></i></button></div>
+    <label class="text-sm font-semibold text-white/70">Link hoặc ID Google Sheet</label>
+    <input id="cfgSheet" class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-white/30" placeholder="https://docs.google.com/spreadsheets/d/…">
+    <label class="mt-5 block text-sm font-semibold text-white/70">Đổi mã PIN (4 số, bỏ trống nếu giữ nguyên)</label>
+    <input id="cfgPin" inputmode="numeric" maxlength="4" class="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-white/30" placeholder="••••">
+    <div class="mt-6 flex flex-wrap gap-2">
+      <button id="cfgSave" class="glow h-11 flex-1 rounded-full bg-white px-5 text-sm font-bold text-black">Lưu &amp; tải lại</button>
+      <button id="cfgMock" class="glass h-11 rounded-full px-5 text-sm font-semibold hover:bg-white/10">Dùng dữ liệu mẫu</button>
+    </div>
+    <button id="cfgClear" class="mt-3 text-xs text-white/40 underline hover:text-white/70">Xóa lịch sử xem</button>
+  </div>
+</div>
+
+<div id="banner" class="glass fixed inset-x-4 bottom-4 z-[60] mx-auto hidden max-w-xl rounded-2xl bg-panel/90 p-4 shadow-2xl"></div>
+<div id="dim" class="fixed inset-0 z-[45] bg-black/95"></div>
+<div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-[120] -translate-x-1/2 translate-y-6 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black opacity-0 shadow-xl transition-all duration-300"></div>
+
+<script>
+(() => {
+'use strict';
+const DEFAULT_SHEET_ID = '1IKTN4-IQVx8Pg239GnR6b4oF4D2LPXXg';
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const icons = () => window.lucide && lucide.createIcons();
+
+const S = {
+  movies: [], filter: 'all', q: '', cur: null, ep: 0,
+  sheet: localStorage.getItem('pc_sheet') ?? DEFAULT_SHEET_ID,
+  pin: localStorage.getItem('pc_pin') || '1234',
+  favs: load('pc_favs', []), hist: load('pc_hist', []), inWatch: false
+};
+
+/* ---------- Toast ---------- */
+let tt;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg;
+  t.style.opacity = 1; t.style.transform = 'translate(-50%,0)';
+  clearTimeout(tt); tt = setTimeout(() => { t.style.opacity = 0; t.style.transform = 'translate(-50%,24px)'; }, 3200);
+}
+
+/* ---------- Helpers: IDs & images ---------- */
+function fid(u) {
+  if (!u) return ''; u = String(u).trim();
+  const m = u.match(/\/d\/([\w-]{10,})/) || u.match(/[?&]id=([\w-]{10,})/) || u.match(/\/folders\/([\w-]{10,})/);
+  if (m) return m[1];
+  return /^[\w-]{15,}$/.test(u) ? u : '';
+}
+const thumb = (id, w) => id ? `https://lh3.googleusercontent.com/d/${id}=w${w}` : '';
+function imgUrl(u, w) {
+  u = String(u || '').trim(); if (!u) return '';
+  if (/drive\.google\.com|docs\.google\.com/.test(u)) return thumb(fid(u), w);
+  return /^https?:\/\//.test(u) ? u : '';
+}
+function gen(title, w, h) {
+  let hash = 0; for (const c of title) hash = (hash * 31 + c.charCodeAt(0)) >>> 0;
+  const hue = hash % 360, words = title.split(/\s+/), lines = []; let cur = '';
+  words.forEach(wd => { if ((cur + ' ' + wd).trim().length > 12 && cur) { lines.push(cur); cur = wd; } else cur = (cur + ' ' + wd).trim(); });
+  if (cur) lines.push(cur);
+  const fs = Math.round(w / 9), y0 = h / 2 - ((lines.length - 1) * fs * 0.6);
+  const tsp = lines.slice(0, 4).map((l, i) => `<tspan x='50%' y='${y0 + i * fs * 1.2}'>${esc(l)}</tspan>`).join('');
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='hsl(${hue},55%,34%)'/><stop offset='1' stop-color='hsl(${(hue + 55) % 360},50%,9%)'/></linearGradient></defs><rect width='100%' height='100%' fill='url(#g)'/><text text-anchor='middle' font-family='sans-serif' font-weight='800' font-size='${fs}' fill='rgba(255,255,255,.85)'>${tsp}</text></svg>`;
+  return 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
+window.imgFail = (el) => {
+  const list = (el.dataset.fb || '').split('|').filter(Boolean);
+  if (list.length) { el.dataset.fb = list.slice(1).join('|'); el.src = list[0]; }
+  else { el.onerror = null; el.src = el.dataset.gen; }
+};
+function img(src, fbs, genSrc, cls, alt) {
+  const first = src || fbs.find(Boolean) || genSrc;
+  const rest = (src ? fbs : fbs.slice(1)).filter(Boolean).join('|');
+  return `<img src="${esc(first)}" data-fb="${esc(rest)}" data-gen="${genSrc}" onerror="imgFail(this)" alt="${esc(alt)}" class="${cls}" loading="lazy" decoding="async" referrerpolicy="no-referrer">`;
+}
+
+/* ---------- Data ---------- */
+const MOCK = [
+  ['Dải Ngân Hà Cuối Cùng', 'Khoa học viễn tưởng, Hành động', 2024, 8.6, '', '', 'MOCK_galaxy_0000001', '', 'Một phi hành đoàn nhỏ lên đường tìm nguồn năng lượng cuối cùng để cứu lấy Trái Đất đang lụi tàn, nhưng chính con tàu của họ lại giấu một bí mật.'],
+  ['Bóng Đêm Sài Gòn', 'Hành động, Tội phạm', 2023, 8.1, '', '', 'MOCK_saigon_00000001', '', 'Một cựu cảnh sát bị cuốn vào cuộc truy đuổi xuyên đêm giữa lòng thành phố không ngủ.'],
+  ['Mùa Hè Của Mẹ', 'Tâm lý, Gia đình', 2022, 8.3, '', '', 'MOCK_summer_0000001', '', 'Chuyến về quê hè năm ấy đã thay đổi cách ba mẹ con nhìn nhau mãi mãi.'],
+  ['Hồ Sơ Bí Ẩn', 'Trinh thám, Tâm lý', 2025, 8.8, '', '', 'MOCK_case_000000001', 'Tập 1', 'Nữ điều tra viên trẻ nhận một hồ sơ cũ tưởng đã khép lại và dần lần ra sự thật.'],
+  ['Hồ Sơ Bí Ẩn', '', '', '', '', '', 'MOCK_case_000000002', 'Tập 2', ''],
+  ['Hồ Sơ Bí Ẩn', '', '', '', '', '', 'MOCK_case_000000003', 'Tập 3', ''],
+  ['Thành Phố Pha Lê', 'Tình cảm, Hài', 2024, 7.4, '', '', 'MOCK_crystal_000001', '', 'Hai người xa lạ cùng kẹt lại ở một thị trấn tuyết phủ và học cách tin nhau.'],
+  ['Kiếm Khách Cuối Cùng', 'Hành động, Cổ trang', 2021, 7.9, '', '', 'MOCK_sword_00000001', '', 'Người kiếm khách già quay lại giang hồ lần cuối để bảo vệ một đứa trẻ.'],
+  ['Hành Tinh Đỏ', 'Khoa học viễn tưởng, Phiêu lưu', 2023, 8.0, '', '', 'MOCK_mars_000000001', 'Tập 1', 'Những người định cư đầu tiên trên sao Hỏa phát hiện dấu vết của một nền văn minh đã mất.'],
+  ['Hành Tinh Đỏ', '', '', '', '', '', 'MOCK_mars_000000002', 'Tập 2', ''],
+  ['Tiếng Vọng Từ Biển', 'Kinh dị, Trinh thám', 2022, 7.2, '', '', 'MOCK_sea_0000000001', '', 'Đội cứu hộ nghe thấy tín hiệu cầu cứu từ một con tàu đã chìm hàng chục năm trước.']
+];
+
+function parseRows(rows) {
+  const map = new Map(), headRe = /^(tên phim|ten phim|name|title|phim)$/i;
+  rows.forEach(r => {
+    const g = (i) => (r[i] === null || r[i] === undefined) ? '' : String(r[i]).trim();
+    const title = g(0); if (!title || headRe.test(title)) return;
+    const key = title.toLowerCase();
+    let m = map.get(key);
+    if (!m) { m = { key, title, genres: [], year: '', rating: '', poster: '', backdrop: '', desc: '', eps: [] }; map.set(key, m); }
+    g(1).split(/[,;|\/]/).map(x => x.trim()).filter(Boolean).forEach(x => { if (!m.genres.some(y => y.toLowerCase() === x.toLowerCase())) m.genres.push(x); });
+    if (!m.year && g(2)) m.year = g(2).replace(/\.0+$/, '');
+    if (!m.rating && g(3)) m.rating = g(3).replace(',', '.');
+    if (!m.poster) m.poster = imgUrl(g(4), 500);
+    if (!m.backdrop) m.backdrop = imgUrl(g(5), 1280);
+    if (!m.desc && g(8)) m.desc = g(8);
+    const id = fid(g(6)); if (id) m.eps.push({ name: g(7), id });
+  });
+  return [...map.values()].map(m => {
+    m.eps.forEach((e, i) => { if (!e.name) e.name = m.eps.length > 1 ? 'Tập ' + (i + 1) : 'Full'; });
+    const id0 = m.eps[0]?.id || '';
+    m.pFb = [thumb(id0, 500)]; m.bFb = [m.poster ? imgUrl(m.poster, 1280) : '', thumb(id0, 1280)];
+    m.pGen = gen(m.title, 400, 600); m.bGen = gen(m.title, 1280, 720);
+    m.quality = /4k|2160/i.test(m.title + m.eps.map(e => e.name).join(' ')) ? '4K' : 'FHD';
+    return m;
+  });
+}
+
+function rowsFromJson(json) {
+  if (json.status === 'error') throw new Error(json.errors?.[0]?.detailed_message || json.errors?.[0]?.message || 'Lỗi Sheet');
+  return (json.table?.rows || []).map(row => Array.from({ length: 9 }, (_, i) => { const c = row.c?.[i]; return c ? (c.v ?? c.f ?? '') : ''; }));
+}
+function viaFetch(id) {
+  return fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json`).then(async res => {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const txt = await res.text();
+    const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
+    if (a < 0 || b < 0) throw new Error('Phản hồi không phải dữ liệu Sheet');
+    return rowsFromJson(JSON.parse(txt.slice(a, b + 1)));
+  });
+}
+function viaScript(id) {
+  return new Promise((resolve, reject) => {
+    const cb = '__pcCb' + Date.now(), s = document.createElement('script');
+    const done = () => { clearTimeout(t); delete window[cb]; s.remove(); };
+    const t = setTimeout(() => { done(); reject(new Error('Google không trả dữ liệu sau 10 giây')); }, 10000);
+    window[cb] = (json) => { done(); try { resolve(rowsFromJson(json)); } catch (e) { reject(e); } };
+    s.onerror = () => { done(); reject(new Error('Không tải được script từ Google')); };
+    s.src = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json;responseHandler:${cb}&_=${Date.now()}`;
+    document.head.appendChild(s);
+  });
+}
+async function fetchSheet(id) {
+  const errs = [];
+  for (const [name, fn] of [['fetch', viaFetch], ['script', viaScript]]) {
+    try { return await fn(id); } catch (e) { errs.push(name + ': ' + e.message); }
+  }
+  throw new Error(errs.join(' | '));
+}
+function hideBanner() { $('#banner').classList.add('hidden'); }
+function showBanner(msg) {
+  const b = $('#banner');
+  b.innerHTML = `<div class="flex items-start gap-3"><i data-lucide="triangle-alert" class="mt-0.5 h-5 w-5 shrink-0 text-yellow-400"></i><div class="min-w-0 flex-1 text-sm"><p class="font-semibold">Không tải được Google Sheet</p><p class="mt-1 break-words text-white/60">${esc(msg)}</p><p class="mt-1 text-white/40">Đang hiển thị dữ liệu mẫu.</p><div class="mt-3 flex gap-2"><button id="bRetry" class="rounded-full bg-white px-4 py-1.5 text-xs font-bold text-black">Thử lại</button><button id="bClose" class="glass rounded-full px-4 py-1.5 text-xs font-semibold">Đóng</button></div></div></div>`;
+  b.classList.remove('hidden');
+  $('#bRetry').onclick = loadData; $('#bClose').onclick = hideBanner; icons();
+}
+
+async function loadData() {
+  hideBanner();
+  $('#grid').innerHTML = '<p class="col-span-full py-16 text-center text-white/40">Đang tải danh sách phim…</p>';
+  const sid = fid(S.sheet) || (S.sheet && /^[\w-]{20,}$/.test(S.sheet) ? S.sheet : '');
+  if (!sid) { S.movies = parseRows(MOCK); toast('Đang dùng dữ liệu mẫu'); return renderAll(); }
+  try {
+    const rows = await fetchSheet(sid);
+    const list = parseRows(rows);
+    if (!list.length) throw new Error('Sheet chưa có phim nào');
+    S.movies = list;
+  } catch (e) {
+    S.movies = parseRows(MOCK);
+    showBanner(e.message);
+  }
+  renderAll();
+}
+
+/* ---------- Render ---------- */
+const isFav = (k) => S.favs.includes(k);
+const genres = () => [...new Set(S.movies.flatMap(m => m.genres))].sort((a, b) => a.localeCompare(b, 'vi'));
+function filtered() {
+  const q = S.q.trim().toLowerCase();
+  return S.movies.filter(m => {
+    if (S.filter === 'fav' && !isFav(m.key)) return false;
+    if (S.filter !== 'all' && S.filter !== 'fav' && !m.genres.includes(S.filter)) return false;
+    return !q || m.title.toLowerCase().includes(q) || m.genres.some(g => g.toLowerCase().includes(q));
+  });
+}
+function renderPills() {
+  const sl = $('#pills').scrollLeft;
+  const items = [['all', 'Tất cả'], ['fav', '♥ Yêu thích'], ...genres().map(g => [g, g])];
+  $('#pills').innerHTML = items.map(([v, l]) => `<button data-pill="${esc(v)}" class="shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition ${S.filter === v ? 'border-white bg-white text-black' : 'glass text-white/80 hover:bg-white/10'}">${esc(l)}</button>`).join('');
+  $('#pills').scrollLeft = sl;
+}
+function cardHTML(m, cls = '') {
+  return `<article data-open="${esc(m.key)}" class="card group relative cursor-pointer ${cls}">
+    <div class="relative aspect-[2/3] overflow-hidden rounded-xl bg-panel ring-1 ring-white/10">
+      ${img(m.poster, m.pFb, m.pGen, 'h-full w-full object-cover', m.title)}
+      <div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition duration-300 group-hover:opacity-100"><span class="glass flex h-14 w-14 items-center justify-center rounded-full"><i data-lucide="play" class="h-6 w-6 fill-white"></i></span></div>
+      <button data-fav="${esc(m.key)}" aria-label="Yêu thích" class="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 backdrop-blur"><i data-lucide="heart" class="h-4 w-4 ${isFav(m.key) ? 'fill-rose-500 text-rose-500' : ''}"></i></button>
+      ${m.eps.length > 1 ? `<span class="absolute bottom-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-xs font-semibold backdrop-blur">${m.eps.length} tập</span>` : ''}
+    </div>
+    <h3 class="mt-2 truncate text-sm font-semibold">${esc(m.title)}</h3>
+    <p class="truncate text-xs text-white/40">${esc([m.year, m.genres[0]].filter(Boolean).join(' • '))}</p>
+  </article>`;
+}
+function renderHero() {
+  const h = $('#hero');
+  if (S.filter !== 'all' || S.q.trim() || !S.movies.length) { h.innerHTML = '<div class="h-28"></div>'; return; }
+  const m = [...S.movies].sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0))[0];
+  const fav = isFav(m.key);
+  h.innerHTML = `<div class="relative min-h-[88vh] w-full overflow-hidden">
+    <div class="hero-mask absolute inset-0">${img(m.backdrop, m.bFb, m.bGen, 'h-full w-full object-cover', m.title)}</div>
+    <div class="absolute inset-0 bg-gradient-to-r from-ink via-ink/60 to-transparent"></div>
+    <div class="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-ink to-transparent"></div>
+    <div class="relative mx-auto flex min-h-[88vh] max-w-[1500px] flex-col justify-end px-4 pb-16 pt-40 sm:px-8 sm:pb-24">
+      <div class="max-w-2xl">
+        <h1 class="text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">${esc(m.title)}</h1>
+        <div class="mt-4 flex flex-wrap items-center gap-3 text-sm font-semibold">
+          ${m.rating ? `<span class="flex items-center gap-1 rounded-md bg-yellow-400 px-2 py-0.5 text-black"><i data-lucide="star" class="h-3.5 w-3.5 fill-black"></i>IMDb ${esc(m.rating)}</span>` : ''}
+          ${m.year ? `<span class="text-white/80">${esc(m.year)}</span>` : ''}
+          <span class="rounded-md border border-white/30 px-2 py-0.5 text-xs">${m.quality}</span>
+          <span class="text-white/60">${esc(m.genres.join(', '))}</span>
+        </div>
+        <p class="mt-4 line-clamp-3 max-w-xl text-[15px] leading-relaxed text-white/75">${esc(m.desc)}</p>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <button data-open="${esc(m.key)}" class="glow flex h-13 items-center gap-2 rounded-full bg-white px-8 py-3.5 text-base font-bold text-black"><i data-lucide="play" class="h-5 w-5 fill-black"></i>Phát ngay</button>
+          <button data-fav="${esc(m.key)}" class="glass flex items-center gap-2 rounded-full px-6 py-3.5 text-base font-semibold hover:bg-white/10"><i data-lucide="heart" class="h-5 w-5 ${fav ? 'fill-rose-500 text-rose-500' : ''}"></i>Yêu thích</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function renderHist() {
+  const showing = S.filter === 'all' && !S.q.trim();
+  const items = S.hist.map(k => S.movies.find(m => m.key === k)).filter(Boolean);
+  $('#histWrap').classList.toggle('hidden', !showing || !items.length);
+  $('#hist').innerHTML = items.map(m => cardHTML(m, 'w-36 shrink-0 sm:w-44')).join('');
+}
+function renderGrid() {
+  const list = filtered();
+  $('#gridTitle').textContent = S.filter === 'all' ? 'Tất cả phim' : S.filter === 'fav' ? 'Phim yêu thích' : S.filter;
+  $('#count').textContent = list.length + ' phim';
+  $('#grid').innerHTML = list.length ? list.map(m => cardHTML(m)).join('') : `<p class="col-span-full py-16 text-center text-white/40">${S.filter === 'fav' ? 'Chưa có phim yêu thích. Nhấn biểu tượng trái tim trên poster để thêm.' : 'Không tìm thấy phim phù hợp.'}</p>`;
+}
+function renderAll() { renderPills(); renderHero(); renderHist(); renderGrid(); icons(); if (S.inWatch && S.cur) fillWatch(); }
+
+/* ---------- Watch room ---------- */
+const byKey = (k) => S.movies.find(m => m.key === k);
+function openWatch(key, ep) {
+  const m = byKey(key); if (!m) return;
+  if (!m.eps.length) return toast('Phim này chưa có link Google Drive');
+  S.cur = m;
+  const lastEp = load('pc_ep', {})[key];
+  S.ep = ep ?? (Number.isInteger(lastEp) && lastEp < m.eps.length ? lastEp : 0);
+  S.hist = [key, ...S.hist.filter(k => k !== key)].slice(0, 20); save('pc_hist', S.hist);
+  if (!S.inWatch) { history.pushState({ w: 1 }, ''); }
+  S.inWatch = true;
+  $('#home').classList.add('hidden'); $('#pills').classList.add('hidden'); $('#watch').classList.remove('hidden');
+  window.scrollTo(0, 0); fillWatch();
+}
+function fillWatch() {
+  const m = S.cur, e = m.eps[S.ep];
+  $('#wTitle').textContent = m.title + (m.eps.length > 1 ? ' – ' + e.name : '');
+  $('#wMeta').textContent = [m.year, m.rating && 'IMDb ' + m.rating, m.quality, m.genres.join(', ')].filter(Boolean).join(' • ');
+  $('#wDesc').textContent = m.desc;
+  const p = $('#player');
+  if (e.id.startsWith('MOCK')) {
+    p.innerHTML = '<div class="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center"><i data-lucide="film" class="h-10 w-10 text-white/40"></i><p class="text-sm text-white/60">Đây là phim mẫu. Gắn Google Sheet của bạn ở “Cấu hình nguồn phim” để xem phim thật.</p></div>';
+  } else {
+    p.innerHTML = `<iframe src="https://drive.google.com/file/d/${esc(e.id)}/preview" class="h-full w-full border-0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+  }
+  $('#epWrap').classList.toggle('hidden', m.eps.length < 2);
+  $('#eps').innerHTML = m.eps.map((x, i) => `<button data-ep="${i}" class="truncate rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${i === S.ep ? 'border-white bg-white text-black' : 'glass text-white/80 hover:bg-white/10'}">${esc(x.name)}</button>`).join('');
+  const f = isFav(m.key);
+  $('#btnFav span').textContent = f ? 'Đã yêu thích' : 'Yêu thích';
+  $('#btnFav').innerHTML = `<i data-lucide="heart" class="h-4 w-4 ${f ? 'fill-rose-500 text-rose-500' : ''}"></i><span>${f ? 'Đã yêu thích' : 'Yêu thích'}</span>`;
+  const eps = load('pc_ep', {}); eps[m.key] = S.ep; save('pc_ep', eps);
+  icons();
+}
+function hideWatch() {
+  S.inWatch = false; S.cur = null; setCinema(false);
+  const pb = $('#pbox'); pb.classList.remove('pfs');
+  $('#player').innerHTML = '';
+  $('#watch').classList.add('hidden'); $('#home').classList.remove('hidden'); $('#pills').classList.remove('hidden');
+  renderHero(); renderHist(); renderGrid(); icons();
+}
+function closeWatch() { if (history.state && history.state.w) history.back(); else hideWatch(); }
+window.addEventListener('popstate', () => { if (S.inWatch) hideWatch(); });
+
+function setCinema(on) {
+  document.body.classList.toggle('cinema', on);
+  const b = $('#btnDim');
+  b.innerHTML = `<i data-lucide="${on ? 'lightbulb' : 'lightbulb-off'}" class="h-4 w-4"></i><span>${on ? 'Bật đèn' : 'Tắt đèn'}</span>`;
+  $('#pbox').style.position = 'relative'; $('#pbox').style.zIndex = on ? 50 : '';
+  if (on) b.style.cssText = 'position:relative;z-index:50'; else b.style.cssText = '';
+  icons();
+}
+function toggleFS() {
+  const box = $('#pbox');
+  const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+  if (fsEl) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+  if (box.classList.contains('pfs')) { box.classList.remove('pfs'); return; }
+  const req = box.requestFullscreen || box.webkitRequestFullscreen;
+  if (!req) { box.classList.add('pfs'); return; }
+  Promise.resolve(req.call(box)).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => box.classList.add('pfs'));
+}
+function toggleFav(key) {
+  S.favs = isFav(key) ? S.favs.filter(k => k !== key) : [...S.favs, key]; save('pc_favs', S.favs);
+  if (S.inWatch) fillWatch(); else { renderHero(); renderGrid(); renderHist(); icons(); }
+}
+
+/* ---------- Events ---------- */
+document.addEventListener('click', (ev) => {
+  const t = ev.target;
+  const fav = t.closest('[data-fav]'); if (fav) { ev.stopPropagation(); return toggleFav(fav.dataset.fav); }
+  const op = t.closest('[data-open]'); if (op) return openWatch(op.dataset.open);
+  const pill = t.closest('[data-pill]'); if (pill) { S.filter = pill.dataset.pill; window.scrollTo({ top: 0 }); return renderAll(); }
+  const ep = t.closest('[data-ep]'); if (ep) { S.ep = +ep.dataset.ep; return fillWatch(); }
+});
+$('#logo').onclick = () => { if (S.inWatch) closeWatch(); S.filter = 'all'; S.q = ''; $('#sbox').value = ''; renderAll(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+$('#back').onclick = closeWatch;
+$('#btnDim').onclick = () => setCinema(!document.body.classList.contains('cinema'));
+$('#dim').onclick = () => setCinema(false);
+$('#btnFs').onclick = toggleFS;
+$('#fsx').onclick = toggleFS;
+$('#btnFav').onclick = () => S.cur && toggleFav(S.cur.key);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setCinema(false); $('#pbox').classList.remove('pfs'); closeCfg(); } });
+
+// Search
+const sbox = $('#sbox');
+function openSearch(open) {
+  sbox.style.width = open ? (innerWidth < 640 ? '9.5rem' : '16rem') : '0'; sbox.style.opacity = open ? 1 : 0;
+  sbox.style.paddingRight = open ? '1rem' : '0'; if (open) sbox.focus();
+}
+$('#sbtn').onclick = () => openSearch(!sbox.style.width || sbox.style.width === '0px');
+sbox.addEventListener('blur', () => { if (!sbox.value) openSearch(false); });
+sbox.addEventListener('input', () => { S.q = sbox.value; if (S.inWatch) closeWatch(); renderHero(); renderHist(); renderGrid(); icons(); });
+
+// Navbar blur on scroll
+const onScroll = () => $('#nav').classList.toggle('scrolled', scrollY > 30);
+addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+// Config
+function openCfg() { $('#cfgSheet').value = S.sheet; $('#cfgPin').value = ''; const c = $('#cfg'); c.classList.remove('hidden'); c.classList.add('flex'); }
+function closeCfg() { const c = $('#cfg'); c.classList.add('hidden'); c.classList.remove('flex'); }
+$('#cfgBtn').onclick = openCfg; $('#cfgClose').onclick = closeCfg;
+$('#cfg').addEventListener('click', (e) => { if (e.target.id === 'cfg') closeCfg(); });
+$('#cfgSave').onclick = () => {
+  const v = $('#cfgSheet').value.trim(); S.sheet = v; localStorage.setItem('pc_sheet', v);
+  const pin = $('#cfgPin').value.trim();
+  if (pin) { if (/^\d{4}$/.test(pin)) { S.pin = pin; localStorage.setItem('pc_pin', pin); toast('Đã đổi PIN'); } else return toast('PIN phải gồm đúng 4 chữ số'); }
+  closeCfg(); if (S.inWatch) hideWatch(); loadData();
+};
+$('#cfgMock').onclick = () => { S.sheet = ''; localStorage.setItem('pc_sheet', ''); closeCfg(); if (S.inWatch) hideWatch(); loadData(); };
+$('#cfgClear').onclick = () => { S.hist = []; save('pc_hist', []); save('pc_ep', {}); renderHist(); toast('Đã xóa lịch sử xem'); };
+
+/* ---------- PWA manifest (Data URI) ---------- */
+(function () {
+  const svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='#090A0F'/><path d='M200 150v212l178-106z' fill='#fff'/></svg>";
+  const icon = 'data:image/svg+xml,' + encodeURIComponent(svg);
+  const man = { name: 'Private Cinema', short_name: 'Cinema', description: 'Rạp phim cá nhân', display: 'standalone', orientation: 'any', background_color: '#090A0F', theme_color: '#090A0F', start_url: location.href.split('#')[0], scope: location.href.split('#')[0].replace(/[^/]*$/, ''), icons: [{ src: icon, sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }] };
+  const l = document.createElement('link'); l.rel = 'manifest';
+  l.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(man));
+  document.head.appendChild(l);
+})();
+
+/* ---------- PIN lock ---------- */
+let entry = '';
+function drawDots() { $('#dots').innerHTML = [0, 1, 2, 3].map(i => `<span class="h-3.5 w-3.5 rounded-full border border-white/40 transition ${i < entry.length ? 'bg-white' : ''}"></span>`).join(''); }
+function buildPad() {
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
+  $('#pad').innerHTML = keys.map(k => k === '' ? '<span></span>' : `<button data-k="${k}" class="flex h-14 items-center justify-center rounded-full bg-white/5 text-xl font-semibold transition active:scale-95 hover:bg-white/15" aria-label="${k === 'del' ? 'Xóa' : k}">${k === 'del' ? '<i data-lucide="delete" class="h-5 w-5"></i>' : k}</button>`).join('');
+}
+function press(k) {
+  if (k === 'del') entry = entry.slice(0, -1); else if (entry.length < 4) entry += k;
+  drawDots();
+  if (entry.length === 4) {
+    if (entry === S.pin) { sessionStorage.setItem('pc_ok', '1'); unlock(); }
+    else { const c = $('#lockCard'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); setTimeout(() => { entry = ''; drawDots(); }, 350); }
+  }
+}
+$('#pad').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) press(b.dataset.k); });
+document.addEventListener('keydown', (e) => {
+  if ($('#lock').classList.contains('hidden')) return;
+  if (/^\d$/.test(e.key)) press(e.key); else if (e.key === 'Backspace') press('del');
+});
+let booted = false;
+function unlock() {
+  $('#lock').classList.add('hidden'); $('#app').classList.remove('hidden');
+  if (!booted) { booted = true; loadData(); }
+}
+buildPad(); drawDots(); icons();
+if (sessionStorage.getItem('pc_ok') === '1') unlock();
+})();
+</script>
+</body>
+</html>
