@@ -89,11 +89,12 @@ tailwind.config = { theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"
   </main>
 
   <!-- WATCH ROOM -->
-  <section id="watch" class="hidden pb-24 pt-20 sm:pt-24">
-    <div class="mx-auto max-w-5xl px-4 sm:px-8">
+  <section id="watch" class="hidden pb-24 pt-32 sm:pt-36">
+    <div class="mx-auto grid max-w-[1500px] gap-8 px-4 sm:px-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+     <div class="min-w-0">
       <div class="mb-4 flex items-center gap-3">
         <button id="back" class="glass flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-white/10" aria-label="Quay lại"><i data-lucide="arrow-left" class="h-5 w-5"></i></button>
-        <div class="min-w-0"><h1 id="wTitle" class="truncate text-xl font-extrabold sm:text-2xl"></h1><p id="wMeta" class="text-sm text-white/50"></p></div>
+        <div class="min-w-0"><h1 id="wTitle" class="truncate text-xl font-extrabold sm:text-2xl"></h1><p id="wMeta" class="text-sm text-white/50"></p><div id="wTags" class="mt-1.5 flex flex-wrap gap-1.5"></div></div>
       </div>
       <div id="pbox" class="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-white/10">
         <div id="player" class="h-full w-full"></div>
@@ -110,6 +111,15 @@ tailwind.config = { theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"
         <div id="eps" class="grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-6"></div>
       </div>
       <p id="wDesc" class="mt-8 max-w-3xl text-[15px] leading-relaxed text-white/70"></p>
+      <section id="recoRow" class="mt-10 lg:hidden">
+        <h2 class="mb-1 text-lg font-bold">Có thể bạn cũng thích</h2>
+        <div id="recoRowList" class="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 py-3 sm:-mx-8 sm:px-8"></div>
+      </section>
+     </div>
+     <aside id="recoSide" class="no-scrollbar hidden lg:sticky lg:top-32 lg:block lg:max-h-[calc(100vh-9rem)] lg:self-start lg:overflow-y-auto">
+       <h2 class="mb-2 px-2 text-lg font-bold">Có thể bạn cũng thích</h2>
+       <div id="recoSideList" class="space-y-1"></div>
+     </aside>
     </div>
   </section>
 </div>
@@ -145,7 +155,7 @@ const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } cat
 const icons = () => window.lucide && lucide.createIcons();
 
 const S = {
-  movies: [], filter: 'all', q: '', cur: null, ep: 0,
+  movies: [], filter: 'all', q: '', cur: null, ep: 0, reco: [],
   sheet: localStorage.getItem('pc_sheet') ?? DEFAULT_SHEET_ID,
   pin: localStorage.getItem('pc_pin') || '1234',
   favs: load('pc_favs', []), hist: load('pc_hist', []), inWatch: false
@@ -362,6 +372,28 @@ function renderAll() { renderPills(); renderHero(); renderHist(); renderGrid(); 
 
 /* ---------- Watch room ---------- */
 const byKey = (k) => S.movies.find(m => m.key === k);
+function pickReco(m) {
+  const mine = new Set(m.genres.map(g => g.toLowerCase()));
+  const a = S.movies.filter(x => x.key !== m.key && x.eps.length);
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  const scored = a.map(x => ({ x, s: x.genres.filter(g => mine.has(g.toLowerCase())).length }));
+  let pick = scored.filter(o => o.s > 0).sort((p, q) => q.s - p.s);
+  if (!pick.length) pick = scored;
+  return pick.slice(0, 10).map(o => o.x.key);
+}
+function recoItem(m) {
+  const sub = [m.year, m.genres.slice(0, 2).join(', ')].filter(Boolean).join(' • ');
+  return `<article data-open="${esc(m.key)}" class="group flex cursor-pointer gap-3 rounded-xl p-2 transition hover:bg-white/5">
+    <div class="relative aspect-video w-40 shrink-0 overflow-hidden rounded-lg bg-panel ring-1 ring-white/10">${img(m.backdrop, m.pFb, m.bGen, 'h-full w-full object-cover', m.title)}<div class="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100"><i data-lucide="play" class="h-6 w-6 fill-white"></i></div></div>
+    <div class="min-w-0 py-0.5"><h3 class="line-clamp-2 text-sm font-semibold">${esc(m.title)}</h3><p class="mt-1 truncate text-xs text-white/40">${esc(sub)}</p>${m.eps.length > 1 ? `<p class="mt-0.5 text-xs text-white/40">${m.eps.length} tập</p>` : ''}</div>
+  </article>`;
+}
+function renderReco() {
+  const list = S.reco.map(byKey).filter(Boolean), d = list.length ? '' : 'none';
+  $('#recoSide').style.display = d; $('#recoRow').style.display = d;
+  $('#recoSideList').innerHTML = list.map(recoItem).join('');
+  $('#recoRowList').innerHTML = list.map(m => cardHTML(m, 'w-36 shrink-0 sm:w-40')).join('');
+}
 function openWatch(key, ep) {
   const m = byKey(key); if (!m) return;
   if (!m.eps.length) return toast('Phim này chưa có link Google Drive');
@@ -371,13 +403,16 @@ function openWatch(key, ep) {
   S.hist = [key, ...S.hist.filter(k => k !== key)].slice(0, 20); save('pc_hist', S.hist);
   if (!S.inWatch) { history.pushState({ w: 1 }, ''); }
   S.inWatch = true;
-  $('#home').classList.add('hidden'); $('#pills').classList.add('hidden'); $('#watch').classList.remove('hidden');
+  S.reco = pickReco(m);
+  $('#home').classList.add('hidden'); $('#pills').classList.remove('hidden'); $('#watch').classList.remove('hidden');
   window.scrollTo(0, 0); fillWatch();
 }
 function fillWatch() {
   const m = S.cur, e = m.eps[S.ep];
   $('#wTitle').textContent = m.title + (m.eps.length > 1 ? ' – ' + e.name : '');
-  $('#wMeta').textContent = [m.year, m.rating && 'IMDb ' + m.rating, m.quality, m.genres.join(', ')].filter(Boolean).join(' • ');
+  $('#wMeta').textContent = [m.year, m.rating && 'IMDb ' + m.rating, m.quality].filter(Boolean).join(' • ');
+  $('#wTags').innerHTML = m.genres.map(g => `<button data-pill="${esc(g)}" class="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-white/80 hover:bg-white/20">${esc(g)}</button>`).join('');
+  renderReco();
   $('#wDesc').textContent = m.desc;
   const p = $('#player');
   if (e.id.startsWith('MOCK')) {
@@ -430,7 +465,7 @@ document.addEventListener('click', (ev) => {
   const t = ev.target;
   const fav = t.closest('[data-fav]'); if (fav) { ev.stopPropagation(); return toggleFav(fav.dataset.fav); }
   const op = t.closest('[data-open]'); if (op) return openWatch(op.dataset.open);
-  const pill = t.closest('[data-pill]'); if (pill) { S.filter = pill.dataset.pill; window.scrollTo({ top: 0 }); return renderAll(); }
+  const pill = t.closest('[data-pill]'); if (pill) { S.filter = pill.dataset.pill; if (S.inWatch) { hideWatch(); if (history.state && history.state.w) history.back(); } window.scrollTo({ top: 0 }); return renderAll(); }
   const ep = t.closest('[data-ep]'); if (ep) { S.ep = +ep.dataset.ep; return fillWatch(); }
 });
 $('#logo').onclick = () => { if (S.inWatch) closeWatch(); S.filter = 'all'; S.q = ''; $('#sbox').value = ''; renderAll(); window.scrollTo({ top: 0, behavior: 'smooth' }); };
