@@ -37,8 +37,9 @@ tailwind.config = { theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"
   @keyframes shake { 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
   #dim { opacity: 0; pointer-events: none; transition: opacity .5s; }
   body.cinema #dim { opacity: 1; pointer-events: auto; }
-  #pbox.pfs { position: fixed; z-index: 90; background: #000; border-radius: 0 !important; aspect-ratio: auto !important; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; }
-  @media (orientation: portrait) { #pbox.pfs { top: 0; left: 100%; width: 100vh; width: 100dvh; height: 100vw; transform-origin: top left; transform: rotate(90deg); } }
+  #pbox.portrait { aspect-ratio: 9 / 16; width: min(100%, calc(72vh * 9 / 16)); width: min(100%, calc(72dvh * 9 / 16)); margin-inline: auto; }
+  #pbox.pfs { position: fixed; z-index: 90; background: #000; border-radius: 0 !important; aspect-ratio: auto !important; top: 0; left: 0; margin: 0 !important; width: 100vw !important; height: 100vh !important; height: 100dvh !important; }
+  @media (orientation: portrait) { #pbox.pfs:not(.portrait) { top: 0; left: 100%; width: 100vh !important; width: 100dvh !important; height: 100vw !important; transform-origin: top left; transform: rotate(90deg); } }
   #fsx { display: none; } #pbox.pfs #fsx { display: flex; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -104,6 +105,7 @@ tailwind.config = { theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"
       <div class="mt-4 flex flex-wrap gap-2">
         <button id="btnDim" class="glass flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold hover:bg-white/10"><i data-lucide="lightbulb-off" class="h-4 w-4"></i><span>Tắt đèn</span></button>
         <button id="btnFs" class="glass flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold hover:bg-white/10"><i data-lucide="maximize" class="h-4 w-4"></i>Toàn màn hình</button>
+        <button id="btnShape" class="glass flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold hover:bg-white/10"><i data-lucide="rectangle-vertical" class="h-4 w-4"></i><span>Khung dọc</span></button>
         <button id="btnFav" class="glass flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold hover:bg-white/10"><i data-lucide="heart" class="h-4 w-4"></i><span>Yêu thích</span></button>
       </div>
       <div id="epWrap" class="mt-8 hidden">
@@ -155,7 +157,7 @@ const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } cat
 const icons = () => window.lucide && lucide.createIcons();
 
 const S = {
-  movies: [], filter: 'all', q: '', cur: null, ep: 0, reco: [],
+  movies: [], filter: 'all', q: '', cur: null, ep: 0, reco: [], shape: load('pc_shape', {}),
   sheet: localStorage.getItem('pc_sheet') ?? DEFAULT_SHEET_ID,
   pin: localStorage.getItem('pc_pin') || '1234',
   favs: load('pc_favs', []), hist: load('pc_hist', []), inWatch: false
@@ -239,7 +241,6 @@ function parseRows(rows) {
     const id0 = m.eps[0]?.id || '';
     m.pFb = [thumb(id0, 500)]; m.bFb = [m.poster ? imgUrl(m.poster, 1280) : '', thumb(id0, 1280)];
     m.pGen = gen(m.title, 400, 600); m.bGen = gen(m.title, 1280, 720);
-    m.quality = /4k|2160/i.test(m.title + m.eps.map(e => e.name).join(' ')) ? '4K' : 'FHD';
     return m;
   });
 }
@@ -344,7 +345,6 @@ function renderHero() {
         <div class="mt-4 flex flex-wrap items-center gap-3 text-sm font-semibold">
           ${m.rating ? `<span class="flex items-center gap-1 rounded-md bg-yellow-400 px-2 py-0.5 text-black"><i data-lucide="star" class="h-3.5 w-3.5 fill-black"></i>IMDb ${esc(m.rating)}</span>` : ''}
           ${m.year ? `<span class="text-white/80">${esc(m.year)}</span>` : ''}
-          <span class="rounded-md border border-white/30 px-2 py-0.5 text-xs">${m.quality}</span>
           <span class="text-white/60">${esc(m.genres.join(', '))}</span>
         </div>
         <p class="mt-4 line-clamp-3 max-w-xl text-[15px] leading-relaxed text-white/75">${esc(m.desc)}</p>
@@ -372,6 +372,24 @@ function renderAll() { renderPills(); renderHero(); renderHist(); renderGrid(); 
 
 /* ---------- Watch room ---------- */
 const byKey = (k) => S.movies.find(m => m.key === k);
+function applyShape() {
+  if (!S.cur) return;
+  const v = S.shape[S.cur.eps[S.ep].id];
+  $('#pbox').classList.toggle('portrait', v === 'p');
+  $('#btnShape').innerHTML = `<i data-lucide="${v === 'p' ? 'rectangle-horizontal' : 'rectangle-vertical'}" class="h-4 w-4"></i><span>${v === 'p' ? 'Khung ngang' : 'Khung dọc'}</span>`;
+  icons();
+}
+function detectShape() {
+  applyShape();
+  const id = S.cur.eps[S.ep].id;
+  if (S.shape[id] || id.startsWith('MOCK')) return;
+  const im = new Image();
+  im.onload = () => {
+    if (!S.shape[id]) { S.shape[id] = im.naturalHeight > im.naturalWidth * 1.05 ? 'p' : 'l'; save('pc_shape', S.shape); }
+    if (S.cur && S.cur.eps[S.ep].id === id) applyShape();
+  };
+  im.src = thumb(id, 400);
+}
 function pickReco(m) {
   const mine = new Set(m.genres.map(g => g.toLowerCase()));
   const a = S.movies.filter(x => x.key !== m.key && x.eps.length);
@@ -410,16 +428,20 @@ function openWatch(key, ep) {
 function fillWatch() {
   const m = S.cur, e = m.eps[S.ep];
   $('#wTitle').textContent = m.title + (m.eps.length > 1 ? ' – ' + e.name : '');
-  $('#wMeta').textContent = [m.year, m.rating && 'IMDb ' + m.rating, m.quality].filter(Boolean).join(' • ');
+  $('#wMeta').textContent = [m.year, m.rating && 'IMDb ' + m.rating].filter(Boolean).join(' • ');
   $('#wTags').innerHTML = m.genres.map(g => `<button data-pill="${esc(g)}" class="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-semibold text-white/80 hover:bg-white/20">${esc(g)}</button>`).join('');
   renderReco();
   $('#wDesc').textContent = m.desc;
   const p = $('#player');
-  if (e.id.startsWith('MOCK')) {
+  if (p.dataset.id !== e.id) {
+   p.dataset.id = e.id;
+   if (e.id.startsWith('MOCK')) {
     p.innerHTML = '<div class="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center"><i data-lucide="film" class="h-10 w-10 text-white/40"></i><p class="text-sm text-white/60">Đây là phim mẫu. Gắn Google Sheet của bạn ở “Cấu hình nguồn phim” để xem phim thật.</p></div>';
-  } else {
-    p.innerHTML = `<iframe src="https://drive.google.com/file/d/${esc(e.id)}/preview" class="h-full w-full border-0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+   } else {
+    p.innerHTML = `<iframe src="https://drive.google.com/file/d/${esc(e.id)}/preview" class="h-full w-full border-0" scrolling="no" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+   }
   }
+  detectShape();
   $('#epWrap').classList.toggle('hidden', m.eps.length < 2);
   $('#eps').innerHTML = m.eps.map((x, i) => `<button data-ep="${i}" class="truncate rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${i === S.ep ? 'border-white bg-white text-black' : 'glass text-white/80 hover:bg-white/10'}">${esc(x.name)}</button>`).join('');
   const f = isFav(m.key);
@@ -431,7 +453,7 @@ function fillWatch() {
 function hideWatch() {
   S.inWatch = false; S.cur = null; setCinema(false);
   const pb = $('#pbox'); pb.classList.remove('pfs');
-  $('#player').innerHTML = '';
+  $('#player').innerHTML = ''; $('#player').dataset.id = ''; $('#pbox').classList.remove('portrait');
   $('#watch').classList.add('hidden'); $('#home').classList.remove('hidden'); $('#pills').classList.remove('hidden');
   renderHero(); renderHist(); renderGrid(); icons();
 }
@@ -453,7 +475,7 @@ function toggleFS() {
   if (box.classList.contains('pfs')) { box.classList.remove('pfs'); return; }
   const req = box.requestFullscreen || box.webkitRequestFullscreen;
   if (!req) { box.classList.add('pfs'); return; }
-  Promise.resolve(req.call(box)).then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => box.classList.add('pfs'));
+  Promise.resolve(req.call(box)).then(() => { if (!box.classList.contains('portrait')) { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} } }).catch(() => box.classList.add('pfs'));
 }
 function toggleFav(key) {
   S.favs = isFav(key) ? S.favs.filter(k => k !== key) : [...S.favs, key]; save('pc_favs', S.favs);
@@ -473,6 +495,7 @@ $('#back').onclick = closeWatch;
 $('#btnDim').onclick = () => setCinema(!document.body.classList.contains('cinema'));
 $('#dim').onclick = () => setCinema(false);
 $('#btnFs').onclick = toggleFS;
+$('#btnShape').onclick = () => { if (!S.cur) return; const id = S.cur.eps[S.ep].id; S.shape[id] = S.shape[id] === 'p' ? 'l' : 'p'; save('pc_shape', S.shape); applyShape(); };
 $('#fsx').onclick = toggleFS;
 $('#btnFav').onclick = () => S.cur && toggleFav(S.cur.key);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setCinema(false); $('#pbox').classList.remove('pfs'); closeCfg(); } });
