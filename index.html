@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta id="vpMeta" name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Private Cinema</title>
 <meta name="theme-color" content="#080910">
 <meta name="mobile-web-app-capable" content="yes">
@@ -198,43 +198,47 @@ tailwind.config = {
   #dim { opacity: 0; pointer-events: none; transition: opacity .5s; }
   body.cinema #dim { opacity: 1; pointer-events: auto; }
 
-  /* Tối ưu render mượt trên mobile và desktop */
   #pbox {
-    touch-action: manipulation;
-    transform: translateZ(0); 
-  }
-  #player, #player iframe {
+    aspect-ratio: var(--vid-ar, 16 / 9);
+    width: min(100%, calc(76vh * var(--vid-ratio, 1.7778)));
+    width: min(100%, calc(76dvh * var(--vid-ratio, 1.7778)));
+    margin-inline: auto;
     touch-action: auto;
-    pointer-events: auto;
+  }
+  @media (min-width: 768px) {
+    #pbox {
+      width: min(100%, calc(82vh * var(--vid-ratio, 1.7778)));
+      width: min(100%, calc(82dvh * var(--vid-ratio, 1.7778)));
+    }
   }
 
-  /* Popblock chặn góc nút bật tab mới của Drive */
+  #player {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    touch-action: auto;
+  }
+  #player iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    pointer-events: auto;
+    touch-action: auto;
+  }
+
   #popblock {
     position: absolute;
     right: 0;
     top: 0;
     z-index: 10;
-    width: 60px;
-    height: 55px;
+    width: 54px;
+    height: 48px;
     background: transparent;
     pointer-events: auto;
-  }
-
-  @media (min-width: 768px) {
-    #pbox {
-      aspect-ratio: var(--vid-ar, 16 / 9);
-      width: min(100%, calc(82vh * var(--vid-ratio, 1.7778)));
-      width: min(100%, calc(82dvh * var(--vid-ratio, 1.7778)));
-      margin-inline: auto;
-    }
-  }
-  @media (max-width: 767px) {
-    #pbox {
-      aspect-ratio: var(--vid-ar, 16 / 9);
-      width: 100% !important;
-      max-height: 50vh;
-      margin-inline: auto;
-    }
   }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -276,7 +280,7 @@ tailwind.config = {
 <div id="app" class="relative z-10 hidden">
   <!-- NAVBAR -->
   <header id="nav" class="fixed inset-x-0 top-0 z-40">
-    <div class="mx-auto flex max-w-[1500px] items-center gap-3 px-4 py-3 sm:px-8">
+    <div class="mx-auto flex max-w-[1500px] items-center gap-2.5 px-4 py-3 sm:px-8">
       <button id="logo" class="btn-motion flex items-center gap-2.5 text-lg font-extrabold tracking-tight">
         <span class="violet-grad flex h-9 w-9 items-center justify-center rounded-xl"><i data-lucide="clapperboard" class="h-4 w-4 text-white"></i></span>
         <span class="hidden bg-gradient-to-r from-white via-purple-200 to-cyanAccent bg-clip-text text-transparent sm:inline">Cinema</span>
@@ -286,7 +290,11 @@ tailwind.config = {
           <button id="sbtn" class="flex h-9 w-9 items-center justify-center rounded-full text-purple-200 hover:text-cyanAccent" aria-label="Tìm kiếm"><i data-lucide="search" class="h-4 w-4"></i></button>
           <input id="sbox" type="search" placeholder="Tìm tên phim, thể loại…" class="w-0 bg-transparent text-sm opacity-0 outline-none placeholder:text-white/40" autocomplete="off">
         </div>
-        <button id="cfgBtn" class="glass btn-motion flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold"><i data-lucide="settings-2" class="h-4 w-4 text-cyanAccent"></i><span class="hidden sm:inline">Cấu hình nguồn phim</span></button>
+        <button id="pcViewBtn" type="button" class="glass btn-motion flex h-10 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold text-purple-200" title="Chuyển bố cục PC ngay trên điện thoại mà không làm lỗi trình phát">
+          <i data-lucide="monitor" class="h-4 w-4 text-cyanAccent"></i>
+          <span id="pcViewLabel">Chế độ PC</span>
+        </button>
+        <button id="cfgBtn" class="glass btn-motion flex h-10 items-center gap-2 rounded-full px-3.5 text-sm font-semibold"><i data-lucide="settings-2" class="h-4 w-4 text-cyanAccent"></i><span class="hidden sm:inline">Cấu hình nguồn phim</span></button>
       </div>
     </div>
     <div id="pills" class="no-scrollbar mx-auto flex max-w-[1500px] items-center gap-2.5 overflow-x-auto px-4 pb-3 pt-0.5 sm:px-8"></div>
@@ -321,14 +329,13 @@ tailwind.config = {
         <div class="min-w-0"><h1 id="wTitle" class="truncate text-xl font-extrabold sm:text-2xl"></h1><p id="wMeta" class="text-sm text-white/55"></p><div id="wTags" class="mt-1.5 flex flex-wrap gap-1.5"></div></div>
       </div>
       <div id="pbox" class="relative w-full overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-purple-500/30" style="box-shadow: 0 20px 60px -15px rgba(124, 58, 237, 0.35);">
-        <div id="player" class="relative h-full w-full"></div>
-        <div id="popblock" class="hidden"></div> <!-- Chỉ dùng khi cần -->
+        <div id="player"></div>
+        <div id="popblock"></div>
       </div>
       <div class="mt-4 flex flex-wrap items-center gap-2.5">
         <button id="btnDim" class="glass btn-motion flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold"><i data-lucide="lightbulb-off" class="h-4 w-4 text-purple-300"></i><span>Tắt đèn</span></button>
         <button id="btnFav" class="glass btn-motion flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold"><i data-lucide="heart" class="h-4 w-4"></i><span>Yêu thích</span></button>
-        <button id="btnStreamMode" type="button" class="glass btn-motion flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold text-cyanAccent"><i data-lucide="refresh-cw" class="h-4 w-4"></i><span>Luồng: Tối giản</span></button>
-        <a id="btnOpenDrive" href="#" target="_blank" rel="noopener noreferrer" class="glass btn-motion flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold text-purple-200"><i data-lucide="external-link" class="h-4 w-4"></i><span>Mở Drive</span></a>
+        <a id="btnOpenDrive" href="#" target="_blank" rel="noopener noreferrer" class="glass btn-motion flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold text-cyanAccent"><i data-lucide="external-link" class="h-4 w-4"></i><span>Mở Drive</span></a>
       </div>
       <div id="epWrap" class="mt-8 hidden">
         <div class="mb-3 flex items-center justify-between">
@@ -407,7 +414,6 @@ tailwind.config = {
 (() => {
 'use strict';
 const DEFAULT_SHEET_ID = '1IKTN4-IQVx8Pg239GnR6b4oF4D2LPXXg';
-const APPS_SCRIPT_STREAM_URL = 'https://script.google.com/macros/s/AKfycbz42ixktIchevvO9V2ZfJEW3UizEMr56vd3dor3C7m6FgJIRe_c8A6NiFN5Q7KP36Gl/exec';
 const PER_PAGE = 28;
 const EPS_PER_PAGE = 10;
 const $ = (s) => document.querySelector(s);
@@ -442,13 +448,31 @@ const icons = () => { try { window.lucide && lucide.createIcons(); } catch (e) {
 const S = {
   movies: [], filter: 'all', q: '', page: 1, epPage: 1, heroIdx: 0,
   cur: null, ep: 0, reco: [],
-  streamMode: lsRaw('pc_stream_mode') || 'minimal',
+  pcLayout: lsRaw('pc_layout_mode') === '1',
   ratios: load('pc_ratios', {}),
   views: load('pc_views', {}),
   sheet: lsRaw('pc_sheet') ?? DEFAULT_SHEET_ID,
   pin: lsRaw('pc_pin') || '1234',
   favs: load('pc_favs', []), hist: load('pc_hist', []), inWatch: false
 };
+
+/* ---------- Chế độ Bố cục PC ngay trên Mobile (Không đổi User-Agent) ---------- */
+function applyLayoutViewport() {
+  const vp = $('#vpMeta');
+  const btn = $('#pcViewBtn');
+  const lbl = $('#pcViewLabel');
+  if (!vp) return;
+  if (S.pcLayout) {
+    vp.setAttribute('content', 'width=1280, user-scalable=yes');
+    if (btn) btn.classList.add('item-selected');
+    if (lbl) lbl.textContent = 'Đang bật PC';
+  } else {
+    vp.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');
+    if (btn) btn.classList.remove('item-selected');
+    if (lbl) lbl.textContent = 'Chế độ PC';
+  }
+}
+applyLayoutViewport();
 
 /* ---------- Toast ---------- */
 let tt;
@@ -1024,15 +1048,6 @@ function renderReco() {
   $('#recoRowList').innerHTML = list.map(m => cardHTML(m, 'w-36 shrink-0 sm:w-40')).join('');
 }
 
-function persistWatchSession(key, ep, push = false) {
-  save('pc_watching', { key, ep });
-  const nextHash = `#watch=${encodeURIComponent(key)}&ep=${ep}`;
-  try {
-    if (push) history.pushState({ w: 1, key, ep }, '', nextHash);
-    else history.replaceState({ w: 1, key, ep }, '', nextHash);
-  } catch (e) {}
-}
-
 function openWatch(key, ep, isRestore = false) {
   const m = byKey(key); if (!m) return;
   if (!m.eps.length) return toast('Phim này chưa có link Google Drive');
@@ -1045,16 +1060,22 @@ function openWatch(key, ep, isRestore = false) {
   if (!isRestore) {
     S.views[key] = (S.views[key] || 0) + 1; save('pc_views', S.views);
   }
-  persistWatchSession(key, S.ep, !S.inWatch && !isRestore);
+  
+  save('pc_watching', { key: key, ep: S.ep });
+  safeUpdateURL(`#watch=${encodeURIComponent(key)}&ep=${S.ep}`, !S.inWatch && !isRestore);
+  
   S.inWatch = true;
   S.reco = pickReco(m);
   $('#home').classList.add('hidden'); $('#pills').classList.remove('hidden'); $('#watch').classList.remove('hidden');
   window.scrollTo(0, 0); fillWatch();
 }
 
-function fillWatch(forceReloadPlayer = false) {
+function fillWatch() {
   const m = S.cur, e = m.eps[S.ep];
-  persistWatchSession(m.key, S.ep, false);
+  
+  save('pc_watching', { key: m.key, ep: S.ep });
+  safeUpdateURL(`#watch=${encodeURIComponent(m.key)}&ep=${S.ep}`, false);
+  
   const dateText = m.dateInfo.full
     ? (m.dateInfo.isNew ? `Cập nhật ${m.dateInfo.short} (${m.dateInfo.full})` : `Cập nhật: ${m.dateInfo.full}`)
     : '';
@@ -1064,10 +1085,6 @@ function fillWatch(forceReloadPlayer = false) {
   renderReco();
   $('#wDesc').textContent = m.desc;
 
-  const modeBtn = $('#btnStreamMode');
-  if (modeBtn) {
-    modeBtn.innerHTML = `<i data-lucide="refresh-cw" class="h-4 w-4"></i><span>Luồng: ${S.streamMode === 'minimal' ? 'Tối giản' : 'Chuẩn Drive'}</span>`;
-  }
   const openDriveBtn = $('#btnOpenDrive');
   if (openDriveBtn) {
     openDriveBtn.href = e.id.startsWith('MOCK') ? '#' : `https://drive.google.com/file/d/${esc(e.id)}/view`;
@@ -1075,23 +1092,15 @@ function fillWatch(forceReloadPlayer = false) {
   
   const p = $('#player');
   const popblock = $('#popblock');
-  const renderSig = `${e.id}:${S.streamMode}`;
-  
-  if (forceReloadPlayer || p.dataset.sig !== renderSig) {
-    p.dataset.sig = renderSig;
+  if (p.dataset.id !== e.id) {
+    p.dataset.id = e.id;
     if (e.id.startsWith('MOCK')) {
-      p.innerHTML = '<div class="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center"><i data-lucide="film" class="h-10 w-10 text-purple-300/60"></i><p class="text-sm text-white/60">Đây là phim mẫu.</p></div>';
+      p.innerHTML = '<div class="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center"><i data-lucide="film" class="h-10 w-10 text-purple-300/60"></i><p class="text-sm text-white/60">Đây là phim mẫu. Gắn Google Sheet của bạn ở “Cấu hình nguồn phim” để xem phim thật.</p></div>';
       popblock.style.display = 'none';
     } else {
-      if (S.streamMode === 'minimal') {
-        const embedUrl = `${APPS_SCRIPT_STREAM_URL}?id=${esc(e.id)}`;
-        p.innerHTML = `<iframe src="${embedUrl}" class="h-full w-full border-0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
-        popblock.style.display = 'none'; 
-      } else {
-        const embedUrl = `https://drive.google.com/file/d/${esc(e.id)}/preview`;
-        p.innerHTML = `<iframe src="${embedUrl}" class="h-full w-full border-0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
-        popblock.style.display = 'block';
-      }
+      const embedUrl = `https://drive.google.com/file/d/${esc(e.id)}/preview`;
+      p.innerHTML = `<iframe src="${embedUrl}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+      popblock.style.display = 'block';
     }
   }
   autoFitVideo();
@@ -1130,7 +1139,7 @@ function fillWatch(forceReloadPlayer = false) {
 
 function hideWatch() {
   S.inWatch = false; S.cur = null; setCinema(false);
-  $('#player').innerHTML = ''; $('#player').dataset.sig = '';
+  $('#player').innerHTML = ''; $('#player').dataset.id = '';
   save('pc_watching', null);
   safeUpdateURL(location.pathname + location.search, false);
   $('#watch').classList.add('hidden'); $('#home').classList.remove('hidden'); $('#pills').classList.remove('hidden');
@@ -1138,7 +1147,7 @@ function hideWatch() {
 }
 function closeWatch() { if (history.state && history.state.w) history.back(); else hideWatch(); }
 window.addEventListener('popstate', () => { 
-  if (S.inWatch && (!location.hash.startsWith('#watch='))) {
+  if (S.inWatch && (!location.hash.startsWith('#watch=') || location.protocol.startsWith('file') || location.protocol.startsWith('content'))) {
     hideWatch(); 
   }
 });
@@ -1208,6 +1217,13 @@ document.addEventListener('mouseover', (ev) => {
   }
 });
 
+$('#pcViewBtn').onclick = () => {
+  S.pcLayout = !S.pcLayout;
+  lsSetRaw('pc_layout_mode', S.pcLayout ? '1' : '0');
+  applyLayoutViewport();
+  toast(S.pcLayout ? 'Đã bật bố cục PC (Tắt "Trang web cho máy tính" của trình duyệt để phát mượt)' : 'Đã về bố cục Tự động');
+};
+
 $('#logo').onclick = () => {
   if (S.inWatch) closeWatch();
   S.filter = 'all'; S.q = ''; S.page = 1; S.heroIdx = 0;
@@ -1219,12 +1235,6 @@ $('#back').onclick = closeWatch;
 $('#btnDim').onclick = () => setCinema(!document.body.classList.contains('cinema'));
 $('#dim').onclick = () => setCinema(false);
 $('#btnFav').onclick = () => S.cur && toggleFav(S.cur.key);
-$('#btnStreamMode').onclick = () => {
-  S.streamMode = S.streamMode === 'minimal' ? 'standard' : 'minimal';
-  lsSetRaw('pc_stream_mode', S.streamMode);
-  toast(`Đã chuyển sang luồng: ${S.streamMode === 'minimal' ? 'Tối giản' : 'Chuẩn Drive'}`);
-  if (S.cur) fillWatch(true);
-};
 
 $('#moodClose').onclick = closeMoodModal;
 $('#moodModal').addEventListener('click', (e) => { if (e.target.id === 'moodModal') closeMoodModal(); });
