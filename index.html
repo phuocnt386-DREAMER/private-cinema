@@ -198,11 +198,17 @@ tailwind.config = {
   #dim { opacity: 0; pointer-events: none; transition: opacity .5s; }
   body.cinema #dim { opacity: 1; pointer-events: auto; }
 
-  #pbox, #player, #player iframe {
+  /* Tối ưu render mượt trên mobile và desktop */
+  #pbox {
+    touch-action: manipulation;
+    transform: translateZ(0); 
+  }
+  #player, #player iframe {
     touch-action: auto;
     pointer-events: auto;
   }
 
+  /* Popblock chặn góc nút bật tab mới của Drive */
   #popblock {
     position: absolute;
     right: 0;
@@ -401,6 +407,7 @@ tailwind.config = {
 (() => {
 'use strict';
 const DEFAULT_SHEET_ID = '1IKTN4-IQVx8Pg239GnR6b4oF4D2LPXXg';
+const APPS_SCRIPT_STREAM_URL = 'https://script.google.com/macros/s/AKfycbz42ixktIchevvO9V2ZfJEW3UizEMr56vd3dor3C7m6FgJIRe_c8A6NiFN5Q7KP36Gl/exec';
 const PER_PAGE = 28;
 const EPS_PER_PAGE = 10;
 const $ = (s) => document.querySelector(s);
@@ -1017,6 +1024,15 @@ function renderReco() {
   $('#recoRowList').innerHTML = list.map(m => cardHTML(m, 'w-36 shrink-0 sm:w-40')).join('');
 }
 
+function persistWatchSession(key, ep, push = false) {
+  save('pc_watching', { key, ep });
+  const nextHash = `#watch=${encodeURIComponent(key)}&ep=${ep}`;
+  try {
+    if (push) history.pushState({ w: 1, key, ep }, '', nextHash);
+    else history.replaceState({ w: 1, key, ep }, '', nextHash);
+  } catch (e) {}
+}
+
 function openWatch(key, ep, isRestore = false) {
   const m = byKey(key); if (!m) return;
   if (!m.eps.length) return toast('Phim này chưa có link Google Drive');
@@ -1029,10 +1045,7 @@ function openWatch(key, ep, isRestore = false) {
   if (!isRestore) {
     S.views[key] = (S.views[key] || 0) + 1; save('pc_views', S.views);
   }
-  
-  save('pc_watching', { key: key, ep: S.ep });
-  safeUpdateURL(`#watch=${encodeURIComponent(key)}&ep=${S.ep}`, !S.inWatch && !isRestore);
-  
+  persistWatchSession(key, S.ep, !S.inWatch && !isRestore);
   S.inWatch = true;
   S.reco = pickReco(m);
   $('#home').classList.add('hidden'); $('#pills').classList.remove('hidden'); $('#watch').classList.remove('hidden');
@@ -1041,10 +1054,7 @@ function openWatch(key, ep, isRestore = false) {
 
 function fillWatch(forceReloadPlayer = false) {
   const m = S.cur, e = m.eps[S.ep];
-  
-  save('pc_watching', { key: m.key, ep: S.ep });
-  safeUpdateURL(`#watch=${encodeURIComponent(m.key)}&ep=${S.ep}`, false);
-  
+  persistWatchSession(m.key, S.ep, false);
   const dateText = m.dateInfo.full
     ? (m.dateInfo.isNew ? `Cập nhật ${m.dateInfo.short} (${m.dateInfo.full})` : `Cập nhật: ${m.dateInfo.full}`)
     : '';
@@ -1070,11 +1080,11 @@ function fillWatch(forceReloadPlayer = false) {
   if (forceReloadPlayer || p.dataset.sig !== renderSig) {
     p.dataset.sig = renderSig;
     if (e.id.startsWith('MOCK')) {
-      p.innerHTML = '<div class="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center"><i data-lucide="film" class="h-10 w-10 text-purple-300/60"></i><p class="text-sm text-white/60">Đây là phim mẫu. Gắn Google Sheet của bạn ở “Cấu hình nguồn phim” để xem phim thật.</p></div>';
+      p.innerHTML = '<div class="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center"><i data-lucide="film" class="h-10 w-10 text-purple-300/60"></i><p class="text-sm text-white/60">Đây là phim mẫu.</p></div>';
       popblock.style.display = 'none';
     } else {
       if (S.streamMode === 'minimal') {
-        const embedUrl = `https://drive.google.com/file/d/${esc(e.id)}/preview?rm=minimal`;
+        const embedUrl = `${APPS_SCRIPT_STREAM_URL}?id=${esc(e.id)}`;
         p.innerHTML = `<iframe src="${embedUrl}" class="h-full w-full border-0" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
         popblock.style.display = 'none'; 
       } else {
@@ -1128,7 +1138,7 @@ function hideWatch() {
 }
 function closeWatch() { if (history.state && history.state.w) history.back(); else hideWatch(); }
 window.addEventListener('popstate', () => { 
-  if (S.inWatch && (!location.hash.startsWith('#watch=') || location.protocol.startsWith('file') || location.protocol.startsWith('content'))) {
+  if (S.inWatch && (!location.hash.startsWith('#watch='))) {
     hideWatch(); 
   }
 });
