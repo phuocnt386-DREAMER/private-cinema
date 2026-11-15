@@ -34,8 +34,7 @@ tailwind.config = {
 </script>
 <style>
   :root {
-    /* Hàm gia tốc chất lỏng siêu mượt, không bị khựng */
-    --fluid-ease: cubic-bezier(0.25, 1, 0.3, 1);
+    --fluid-ease: cubic-bezier(0.16, 1, 0.3, 1);
   }
   html { background: #080910; scroll-behavior: smooth; }
   body {
@@ -57,20 +56,19 @@ tailwind.config = {
       radial-gradient(60% 50% at 50% 90%, rgba(168, 85, 247, 0.14), transparent 75%);
   }
 
-  /* Kính lỏng trượt cực kỳ êm ái */
   .glass {
     background: linear-gradient(145deg, rgba(28, 32, 54, 0.65), rgba(15, 17, 30, 0.48));
     -webkit-backdrop-filter: blur(24px) saturate(160%);
     backdrop-filter: blur(24px) saturate(160%);
     border: 1px solid rgba(168, 85, 247, 0.22);
     box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.14), 0 10px 30px -8px rgba(0, 0, 0, 0.5);
-    transition: transform 0.4s var(--fluid-ease), background 0.35s ease, border-color 0.35s ease, box-shadow 0.4s var(--fluid-ease);
+    transition: transform 0.45s var(--fluid-ease), background 0.4s ease, border-color 0.4s ease, box-shadow 0.45s var(--fluid-ease);
   }
   .glass:hover {
-    background: linear-gradient(145deg, rgba(124, 58, 237, 0.26), rgba(19, 21, 36, 0.78));
-    border-color: rgba(168, 85, 247, 0.6);
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.3), 0 16px 40px -6px rgba(124, 58, 237, 0.45);
-    transform: translateY(-2px);
+    background: linear-gradient(145deg, rgba(124, 58, 237, 0.28), rgba(19, 21, 36, 0.82));
+    border-color: rgba(168, 85, 247, 0.65);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.32), 0 18px 45px -6px rgba(124, 58, 237, 0.5);
+    transform: translateY(-2.5px);
   }
   .glass:active {
     transform: scale(0.96);
@@ -79,14 +77,14 @@ tailwind.config = {
   .violet-grad {
     background: linear-gradient(135deg, #7C3AED 0%, #A855F7 100%);
     color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.32);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 30px rgba(124, 58, 237, 0.6), 0 0 70px rgba(168, 85, 247, 0.3);
-    transition: transform 0.45s var(--fluid-ease), box-shadow 0.45s var(--fluid-ease), filter 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 32px rgba(124, 58, 237, 0.65), 0 0 75px rgba(168, 85, 247, 0.35);
+    transition: transform 0.45s var(--fluid-ease), box-shadow 0.45s var(--fluid-ease), filter 0.35s ease;
   }
   .violet-grad:hover {
-    transform: translateY(-2px) scale(1.02);
+    transform: translateY(-3px) scale(1.025);
     filter: brightness(1.12);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 45px rgba(168, 85, 247, 0.85), 0 0 95px rgba(34, 211, 238, 0.4);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 48px rgba(168, 85, 247, 0.85), 0 0 100px rgba(34, 211, 238, 0.45);
   }
   .violet-grad:active {
     transform: scale(0.96);
@@ -95,31 +93,30 @@ tailwind.config = {
   .item-selected {
     background: linear-gradient(135deg, #7C3AED 0%, #A855F7 100%) !important;
     color: #fff !important;
-    border-color: rgba(34, 211, 238, 0.85) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 8px 25px -3px rgba(124, 58, 237, 0.75), 0 0 22px rgba(34, 211, 238, 0.45) !important;
-    transform: translateY(-1.5px) scale(1.02);
-    transition: all 0.4s var(--fluid-ease);
+    border-color: rgba(34, 211, 238, 0.9) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 10px 32px -3px rgba(124, 58, 237, 0.8), 0 0 24px rgba(34, 211, 238, 0.5) !important;
+    transform: translateY(-2px) scale(1.025);
+    transition: all 0.45s var(--fluid-ease);
   }
 
   .btn-motion {
-    transition: transform 0.4s var(--fluid-ease), background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s var(--fluid-ease);
+    transition: transform 0.45s var(--fluid-ease), background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s var(--fluid-ease);
   }
-  .btn-motion:hover { transform: translateY(-2px); }
+  .btn-motion:hover { transform: translateY(-2.5px); }
   .btn-motion:active { transform: scale(0.95); }
 
-  /* KHẮC PHỤC TRIỆT ĐỂ LỖI MẤT GÓC: Dùng clip-path và mask bo tròn tuyệt đối */
   .card {
     transition: transform 0.45s var(--fluid-ease);
+    will-change: transform;
   }
   .card .poster-shell {
     border-radius: 1rem;
     overflow: hidden;
     position: relative;
-    /* Ép GPU render mặt nạ bo tròn bọc chặt lấy hình ảnh bên trong */
     clip-path: inset(0px round 1rem);
     -webkit-clip-path: inset(0px round 1rem);
     transform: translateZ(0);
-    transition: border-color 0.35s ease, box-shadow 0.45s var(--fluid-ease);
+    transition: border-color 0.4s ease, box-shadow 0.45s var(--fluid-ease);
   }
   .card img {
     transition: transform 0.6s var(--fluid-ease);
@@ -130,16 +127,15 @@ tailwind.config = {
   }
   .card:hover .poster-shell {
     border-color: rgba(168, 85, 247, 0.85);
-    box-shadow: 0 16px 35px -8px rgba(124, 58, 237, 0.55), 0 0 20px rgba(34, 211, 238, 0.3);
+    box-shadow: 0 18px 40px -8px rgba(124, 58, 237, 0.6), 0 0 25px rgba(34, 211, 238, 0.35);
   }
   .card:hover img {
-    transform: scale(1.05);
+    transform: scale(1.06);
   }
   .card:active {
     transform: scale(0.96);
   }
 
-  /* Top 5 Hero Deck: Cố định bo tròn chống lòi góc bằng clip-path */
   .deck-card {
     border-radius: 0.85rem;
     overflow: hidden;
@@ -147,12 +143,12 @@ tailwind.config = {
     clip-path: inset(0px round 0.85rem);
     -webkit-clip-path: inset(0px round 0.85rem);
     transform: translateZ(0);
-    transition: transform 0.4s var(--fluid-ease), border-color 0.35s ease, box-shadow 0.4s var(--fluid-ease), opacity 0.35s ease, filter 0.35s ease;
+    transition: transform 0.45s var(--fluid-ease), border-color 0.4s ease, box-shadow 0.45s var(--fluid-ease), opacity 0.35s ease, filter 0.35s ease;
     opacity: 0.55;
     filter: saturate(80%);
   }
   .deck-card img {
-    transition: transform 0.55s var(--fluid-ease);
+    transition: transform 0.6s var(--fluid-ease);
   }
   .deck-card:hover {
     opacity: 0.9;
@@ -160,13 +156,13 @@ tailwind.config = {
     filter: saturate(100%);
   }
   .deck-card:hover img {
-    transform: scale(1.04);
+    transform: scale(1.05);
   }
   .deck-card.active {
     opacity: 1;
     transform: translateY(-5px) scale(1.04);
     border-color: rgba(34, 211, 238, 0.95) !important;
-    box-shadow: 0 14px 30px -4px rgba(124, 58, 237, 0.75), 0 0 20px rgba(34, 211, 238, 0.55);
+    box-shadow: 0 16px 35px -4px rgba(124, 58, 237, 0.8), 0 0 24px rgba(34, 211, 238, 0.6);
     filter: saturate(110%) brightness(1.05);
     z-index: 10;
   }
@@ -387,6 +383,7 @@ tailwind.config = {
 (() => {
 'use strict';
 const DEFAULT_SHEET_ID = '1IKTN4-IQVx8Pg239GnR6b4oF4D2LPXXg';
+const APPS_SCRIPT_STREAM_URL = 'https://script.google.com/macros/s/AKfycbz42ixktIchevvO9V2ZfJEW3UizEMr56vd3dor3C7m6FgJIRe_c8A6NiFN5Q7KP36Gl/exec';
 const PER_PAGE = 28;
 const EPS_PER_PAGE = 10;
 const $ = (s) => document.querySelector(s);
@@ -675,7 +672,7 @@ function cardHTML(m, cls = '') {
   const vCount = S.views[m.key] || 0;
   const subText = [m.dateInfo.short, m.genres[0]].filter(Boolean).join(' • ');
   return `<article data-open="${esc(m.key)}" class="card group relative cursor-pointer ${cls}">
-    <div class="poster-shell relative aspect-[2/3] overflow-hidden rounded-2xl bg-panel ring-1 ring-purple-400/20">
+    <div class="poster-shell relative aspect-[2/3] bg-panel ring-1 ring-purple-400/20">
       ${img(m.poster, m.pFb, m.pGen, 'h-full w-full object-cover', m.title)}
       <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-ink/80 via-purple-950/30 to-transparent opacity-0 transition duration-300 group-hover:opacity-100">
         <span class="violet-grad flex h-14 w-14 items-center justify-center rounded-full"><i data-lucide="play" class="h-6 w-6 fill-white text-white ml-0.5"></i></span>
@@ -746,7 +743,7 @@ function renderHero() {
       <div class="no-scrollbar flex gap-2.5 overflow-x-auto py-1.5">
         ${top5.map((item, idx) => `
           <button type="button" data-hero-idx="${idx}" aria-label="Xem trước ${esc(item.title)}"
-            class="deck-card relative h-24 w-16 shrink-0 rounded-xl border-2 ${idx === S.heroIdx ? 'active' : 'border-white/15'} bg-panel sm:h-28 sm:w-20">
+            class="deck-card relative h-24 w-16 shrink-0 border-2 ${idx === S.heroIdx ? 'active' : 'border-white/15'} bg-panel sm:h-28 sm:w-20">
             ${img(item.poster, item.pFb, item.pGen, 'h-full w-full object-cover', item.title)}
             <span class="absolute left-1 top-1 rounded bg-ink/80 px-1.5 py-0.2 text-[10px] font-bold text-cyanAccent backdrop-blur">#${idx + 1}</span>
             <span class="absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-ink via-ink/80 to-transparent px-1.5 py-1 text-[10px] font-semibold text-white">${esc(item.title)}</span>
@@ -995,13 +992,16 @@ function fillWatch() {
   $('#wTags').innerHTML = m.genres.map(g => `<button data-mood-search="${esc(g)}" class="glass btn-motion rounded-full px-3 py-0.5 text-xs font-semibold text-purple-200">${esc(g)}</button>`).join('');
   renderReco();
   $('#wDesc').textContent = m.desc;
+  
   const p = $('#player');
   if (p.dataset.id !== e.id) {
    p.dataset.id = e.id;
    if (e.id.startsWith('MOCK')) {
     p.innerHTML = '<div class="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center"><i data-lucide="film" class="h-10 w-10 text-purple-300/60"></i><p class="text-sm text-white/60">Đây là phim mẫu. Gắn Google Sheet của bạn ở “Cấu hình nguồn phim” để xem phim thật.</p></div>';
    } else {
-    p.innerHTML = `<iframe src="https://drive.google.com/file/d/${esc(e.id)}/preview" class="h-full w-full border-0" scrolling="no" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+    // Sử dụng trực tiếp iframe nhúng chính thức của Google Drive (đảm bảo load ổn định 100% trên mọi trình duyệt)
+    const embedUrl = `https://drive.google.com/file/d/${esc(e.id)}/preview`;
+    p.innerHTML = `<iframe src="${embedUrl}" class="h-full w-full border-0" scrolling="no" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
    }
   }
   autoFitVideo();
@@ -1093,8 +1093,8 @@ document.addEventListener('click', (ev) => {
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
   }
-  const moodBtn = t.closest('#btnMoodPicker');
-  if (moodBtn) return openMoodModal();
+  const moodBtn = t.closest('[data-mood-picker]');
+  if (moodBtn || t.closest('#btnMoodPicker')) return openMoodModal();
   const moodTag = t.closest('[data-mood-tag]');
   if (moodTag) return applyMoodSearch(moodTag.dataset.moodTag);
   const moodSearch = t.closest('[data-mood-search]');
